@@ -28,7 +28,6 @@ class MyDecafParser extends DecafParser
         // TODO: parse variable and function definitions
         while(!this.tokens.isEmpty())
         {
-        	System.out.println("TOKENS.SIZE == " + this.tokens.size());
         	if(df.isNextTokenKeyword(this.tokens, "def"))
         	{
         		program.functions.add(parseFunc());
@@ -59,11 +58,6 @@ class MyDecafParser extends DecafParser
 			if (df.isNextTokenSymbol(tokens, ";"))
 			{
 				df.consumeNextToken(tokens);
-
-				System.out.println("TYPE = " + type);
-				System.out.println("NAME = " + name + "\n");
-
-				System.out.println("VARIABLE = " + new ASTVariable(name,type));
 
 				return new ASTVariable(name, type);
 				
@@ -210,15 +204,12 @@ class MyDecafParser extends DecafParser
 
     public ASTStatement parseStmnts() throws InvalidSyntaxException
     {
-    	ASTVoidFunctionCall vfc;
-    	String name;
-    	// statement = loc OR FunctionCall
     	if (df.isNextToken(tokens, Token.Type.ID))
     	{
     
     		try
     		{
-        		vfc = parseVoidFunc();
+    	    	ASTVoidFunctionCall vfc = parseVoidFunc();
         		return vfc;
 
     		}
@@ -238,8 +229,6 @@ class MyDecafParser extends DecafParser
     			}
     		}
     	} 
-    	// stmnt -> if | while ( Expr)
-    	// CONDITIONAL
     	else if (df.isNextTokenKeyword(tokens, "if"))
     	{
     		return parseIf();
@@ -251,18 +240,14 @@ class MyDecafParser extends DecafParser
     	else if (df.isNextTokenKeyword(tokens, "return"))
     	{
     		return parseReturn();
-    		// break;
-    		// BREAK STATEMENT
+
     	} else if (df.isNextTokenKeyword(tokens, "break"))
     	{
     		return parseBreak();
-    		// continue;
-    		// CONTINUE STATEMENT
+
     	} else if (df.isNextTokenKeyword(tokens, "continue"))
     	{
-    		df.consumeNextToken(tokens);
-    		df.matchSymbol(tokens, ";");
-    		return new ASTContinue();
+    		return parseContinue();
     	}
     	throw new InvalidSyntaxException("");
     }
@@ -327,7 +312,7 @@ class MyDecafParser extends DecafParser
     		ASTExpression ex = parseExpr();
     		df.matchSymbol(tokens, ";");
     		return new ASTReturn(ex);
-    		return null;
+    		//return null;
     	}
     }
     
@@ -349,8 +334,7 @@ class MyDecafParser extends DecafParser
     {
     	if(df.isNextToken(tokens, Token.Type.ID))
     	{
-    		String name = tokens.peek().text;
-    		df.consumeNextToken(tokens);
+    		String name = tokens.poll().text;
     		if(df.isNextTokenSymbol(tokens, "["))
     		{
     			df.matchSymbol(tokens, "[");
@@ -363,14 +347,16 @@ class MyDecafParser extends DecafParser
     			return new ASTLocation(name);
     		}
     	}
+    	throw new InvalidSyntaxException("");
     }
     
     public ASTConditional parseIf() throws InvalidSyntaxException
     {
     	df.matchKeyword(tokens, "if");
-    	df.matchSymbol(tokens, "(");
-    	ASTExpression ex = parseExpr();
-    	df.matchSymbol(tokens, ")");
+
+        ASTExpression ex = parseExpr();
+        System.out.println("EX IN IF ====> " + ex);
+
     	ASTBlock block = parseBlock();
     	if(df.isNextTokenKeyword(tokens, "else"))
     	{
@@ -398,5 +384,148 @@ class MyDecafParser extends DecafParser
 		df.matchSymbol(tokens, ";");
 		return new ASTContinue();
     }
+
+    public ASTLiteral parseLit() throws InvalidSyntaxException
+    {
+    	String str = "";
+    	if(df.isNextToken(tokens, Token.Type.DEC) || df.isNextToken(tokens, Token.Type.HEX))
+    	{
+    		str = tokens.peek().text;
+    		df.consumeNextToken(tokens);
+    		return new ASTLiteral(ASTNode.DataType.INT, str);
+    	}
+    	else if(df.isNextToken(tokens, Token.Type.STR))
+    	{
+    		str = tokens.peek().text;
+    		df.consumeNextToken(tokens);
+    		return new ASTLiteral(ASTNode.DataType.STR, str);
+    	}
+    	else     	if(df.isNextTokenKeyword(tokens, "true") || df.isNextTokenKeyword(tokens, "false"))
+    	{
+    		str = tokens.peek().text;
+    		df.consumeNextToken(tokens);
+    		return new ASTLiteral(ASTNode.DataType.BOOL, str);
+    	}
+    	else
+    	{
+    		throw new InvalidSyntaxException("");
+    	}
+    }
+
+    public ASTExpression parseExpr() throws InvalidSyntaxException
+    {
+    	ASTExpression ex;
+    	String name;
+    	if (df.isNextToken(tokens, Token.Type.ID))
+    	{
+    		name = tokens.poll().text;
+    		//df.consumeNextToken(tokens);
+    		// FUNC CALL
+        	if(df.isNextTokenSymbol(tokens, ")"))
+        	{
+        		return new ASTLocation(name);
+        	}
+    		if (df.isNextTokenSymbol(tokens, "("))
+    		{
+
+    			ASTFunctionCall f = new ASTFunctionCall(name);
+
+    			df.matchSymbol(tokens, "(");
+    			if (!df.isNextTokenSymbol(tokens, ")"))
+    			{
+    				f.arguments.addAll(parseArgList());
+    				df.matchSymbol(tokens, ")");
+    				ex = f;
+    			}
+    			else 
+    			{
+    				// VOID FUNC CALL
+    				df.matchSymbol(tokens, ")");
+    				ex = f;
+    			}
+    			return ex;
+    		} 
+    		// LOCATION
+    		else 
+    		{
+
+    			return parseLoc();
+    		}
+    		// LITERAL
+    	} else if (df.isNextToken(tokens, Token.Type.DEC) || df.isNextToken(tokens, Token.Type.HEX) 
+    			|| df.isNextToken(tokens, Token.Type.STR) || df.isNextTokenKeyword(tokens, "true")
+    			|| df.isNextTokenKeyword(tokens, "false"))
+    	{    		
+    		return parseLit();
+    	} 
+    	// UNARY EXPRESSION
+    	else if (df.isNextTokenSymbol(tokens, "!") || (df.isNextTokenSymbol(tokens, "-")))
+    	{
+    		try
+    		{
+    			System.out.println("in UNARY - EXP");
+        		return parseUnaryExpr();
+
+    		}
+    		catch(InvalidSyntaxException e)
+    		{
+    			System.out.println("ERROR In unary(parse expr)");
+    		}
+    		//return parseUnaryExpr();
+    	}
+    	// (EXPRESSION)
+    	else if (df.isNextTokenSymbol(tokens, "("))
+    	{
+    		System.out.println("IN EXPRESSION - EXP");
+    		df.matchSymbol(tokens, "(");
+    		System.out.println("matched (");
+    		ex = parseExpr();
+    		df.matchSymbol(tokens, ")");
+    		System.out.println("matched )");
+    		System.out.println("EX => " + ex);
+    		return ex;
+    	}
+    	else if (df.isNextTokenSymbol(tokens, ")"))
+    	{
+    		System.out.println("IN EXPRESSION - EXP - CLOSED PAR");
+    		df.matchSymbol(tokens, "(");
+    		ex = parseExpr();
+    		df.matchSymbol(tokens, ")");
+    		System.out.println("U EX => " + ex);
+
+    		return ex;
+    	}
+
+//    	
+//    	if (df.isNextToken(tokens, Token.Type.SYM) && (!df.isNextTokenSymbol(tokens, ";")))
+//    	{
+//    		return parseBinaryExpr(tokens, ex);
+//    	}
+    	throw new InvalidSyntaxException("");
+    }
+
+    public ASTUnaryExpr parseUnaryExpr() throws InvalidSyntaxException
+    {
+    	if (df.isNextTokenSymbol(tokens, "!"))
+    	{
+    		df.matchSymbol(tokens, "!");
+
+        	ASTExpression ex = parseExpr();
+
+    		//ASTExpression ex = parseExpr();
+    		return new ASTUnaryExpr(ASTUnaryExpr.UnaryOp.NOT, ex);
+    	} else if (df.isNextTokenSymbol(tokens, "-"))
+    		
+    	{
+    		df.matchSymbol(tokens, "-");
+
+    		return new ASTUnaryExpr(ASTUnaryExpr.UnaryOp.NEG, parseExpr());
+    	}
+    	else
+    	{
+    		throw new InvalidSyntaxException("");
+    	}
+    }
+
 
 }
