@@ -73,6 +73,53 @@ class MyDecafParser extends DecafParser
 
     }
 
+    public ASTBinaryExpr parseBinaryExpr( ASTExpression ex, int index) throws InvalidSyntaxException
+    {
+    	switch(index){
+    	case 0:
+    		df.matchSymbol(tokens, "*");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.MUL, ex, parseExpr()); 
+    	case 1:
+    		df.matchSymbol(tokens, "/");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.DIV, ex, parseExpr()); 
+    	case 2:
+    		df.matchSymbol(tokens, "%");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.MOD, ex, parseExpr()); 
+    	case 3:
+    		df.matchSymbol(tokens, "+");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.ADD, ex, parseExpr()); 
+    	case 4:
+    		df.matchSymbol(tokens, "-");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.SUB, ex, parseExpr()); 
+    	case 5:
+    		df.matchSymbol(tokens, "<");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.LT, ex, parseExpr()); 
+    	case 6:
+    		df.matchSymbol(tokens, "<=");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.LE, ex, parseExpr()); 
+    	case 7:
+    		df.matchSymbol(tokens, ">=");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.GE, ex, parseExpr()); 
+    	case 8:
+			df.matchSymbol(tokens, ">");
+			return new ASTBinaryExpr(ASTBinaryExpr.BinOp.GT, ex, parseExpr()); 
+    	case 9:
+    		df.matchSymbol(tokens, "==");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.EQ, ex, parseExpr()); 
+    	case 10:
+    		df.matchSymbol(tokens, "!=");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.NE, ex, parseExpr()); 
+    	case 11:
+    		df.matchSymbol(tokens, "&&");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.AND, ex, parseExpr()); 
+    	case 12:
+    		df.matchSymbol(tokens, "||");
+    		return new ASTBinaryExpr(ASTBinaryExpr.BinOp.OR, ex, parseExpr()); 
+    	default:
+    		throw new InvalidSyntaxException("");
+    	} 	
+    }
+
     public ASTBlock parseBlock() throws InvalidSyntaxException
 {
 	ASTBlock block = new ASTBlock();
@@ -109,6 +156,35 @@ class MyDecafParser extends DecafParser
 		return new ASTBreak();
     }
  
+    public int checkForBin(ASTExpression ex) throws InvalidSyntaxException
+    {
+    	int i = 0;
+    	String[] binOps = new String[12];
+    	
+    	binOps[i] = "*";
+    	binOps[i++] = "/";
+    	binOps[i++] = "%";
+    	binOps[i++] = "+";
+    	binOps[i++] = "-";
+    	binOps[i++] = "<";
+    	binOps[i++] = "<=";
+    	binOps[i++] = ">=";
+    	binOps[i++] = ">";
+    	binOps[i++] = "==";
+    	binOps[i++] = "!=";
+    	binOps[i++] = "&&";
+    	binOps[i++] = "||";
+    	
+    	for (int j = 0; j < binOps.length; j++)
+    	{
+    		if (tokens.peek().text.equals(binOps[j]))
+    		{
+    			return j;
+    		}
+    	}
+    	return -1;
+    }
+
     public ASTContinue parseContinue() throws InvalidSyntaxException
     {
 		df.matchKeyword(tokens, "continue");
@@ -536,4 +612,5 @@ class MyDecafParser extends DecafParser
     	return new ASTWhileLoop(ex, block);
     }
     
+        
 }
